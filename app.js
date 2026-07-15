@@ -145,7 +145,7 @@ app.post("/create", async (req, res) => {
 });
 
    //view all posts
-app.get("/viewall", async (req, res) => {
+app.post("/viewall", async (req, res) => {
     const token = req.headers.token;
 
     jwt.verify(token, "blogapp", async (err, decoded) => {
@@ -160,6 +160,44 @@ app.get("/viewall", async (req, res) => {
 
             const posts = await postModel
                 .find()
+                
+
+            res.json({
+                status: "success",
+                posts: posts
+            });
+
+        } catch (error) {
+
+            res.json({
+                status: "Error",
+                message: error.message
+            });
+
+        }
+
+    });
+});
+
+        // view my post
+
+app.post("/viewmypost", async (req, res) => {
+
+    let input = req.body;
+    const token = req.headers.token;
+
+    jwt.verify(token, "blogapp", async (err, decoded) => {
+
+        if (err) {
+            return res.json({
+                status: "Invalid Token"
+            });
+        }
+
+        try {
+
+            const posts = await postModel
+                .find(input)
                 
 
             res.json({
