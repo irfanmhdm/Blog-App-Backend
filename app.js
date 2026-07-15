@@ -3,7 +3,9 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+
 const userModel = require("./models/users");
+const postModel = require("./models/post");
 
 const app = express();
 
@@ -14,21 +16,23 @@ mongoose.connect(
   "mongodb://irfanmhdm:irfanmhdm@ac-se39fxg-shard-00-00.1l1lwd0.mongodb.net:27017,ac-se39fxg-shard-00-01.1l1lwd0.mongodb.net:27017,ac-se39fxg-shard-00-02.1l1lwd0.mongodb.net:27017/?ssl=true&replicaSet=atlas-ly15db-shard-0&authSource=admin&appName=Cluster0"
 );
 
-// SIGNUP
+// ---------------- SIGNUP ----------------
+
 app.post("/signup", async (req, res) => {
   try {
     let input = req.body;
 
-    let hashedPassword = bcrypt.hashSync(input.password, 10);
-    input.password = hashedPassword;
-
-    let check = await userModel.findOne({ email: input.email });
+    let check = await userModel.findOne({
+      email: input.email,
+    });
 
     if (check) {
       return res.json({
         status: "Email already exists",
       });
     }
+
+    input.password = bcrypt.hashSync(input.password, 10);
 
     let result = new userModel(input);
     await result.save();
@@ -44,34 +48,37 @@ app.post("/signup", async (req, res) => {
   }
 });
 
-// SIGNIN
+// ---------------- SIGNIN ----------------
+
 app.post("/signin", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check if user exists
-    const user = await userModel.findOne({ email: email });
+    const user = await userModel.findOne({
+      email: email,
+    });
 
     if (!user) {
       return res.json({
-        status: "Invalid Email"
+        status: "Invalid Email",
       });
     }
 
-    // Compare password
-    const passwordValidator = bcrypt.compareSync(password, user.password);
+    const passwordValidator = bcrypt.compareSync(
+      password,
+      user.password
+    );
 
     if (!passwordValidator) {
       return res.json({
-        status: "Invalid Password"
+        status: "Invalid Password",
       });
     }
 
-    // Generate JWT Token
     jwt.sign(
       {
         userId: user._id,
-        email: user.email
+        email: user.email,
       },
       "blogapp",
       { expiresIn: "1d" },
@@ -79,22 +86,60 @@ app.post("/signin", async (req, res) => {
         if (err) {
           return res.status(500).json({
             status: "Error",
-            message: err.message
+            message: err.message,
           });
         }
 
         res.json({
           status: "success",
           token: token,
-          id: user._id
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+          },
         });
       }
     );
-
   } catch (error) {
     res.status(500).json({
       status: "Error",
-      message: error.message
+      message: error.message,
+    });
+  }
+});
+
+// ---------------- CREATE POST ----------------
+
+app.post("/create", async (req, res) => {
+  try {
+    const token = req.headers.token;
+
+    jwt.verify(token, "blogapp", async (err, decoded) => {
+      if (err) {
+        return res.json({
+          status: "Invalid Token",
+        });
+      }
+
+      const input = {
+        userId: decoded.userId,
+        message: req.body.message,
+        postedDate: new Date(),
+      };
+
+      const result = new postModel(input);
+      await result.save();
+
+      res.json({
+        status: "Post created successfully",
+      });
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "Error",
+      message: error.message,
     });
   }
 });
