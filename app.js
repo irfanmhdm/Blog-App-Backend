@@ -144,6 +144,41 @@ app.post("/create", async (req, res) => {
   }
 });
 
+   //view all posts
+app.get("/viewall", async (req, res) => {
+    const token = req.headers.token;
+
+    jwt.verify(token, "blogapp", async (err, decoded) => {
+
+        if (err) {
+            return res.json({
+                status: "Invalid Token"
+            });
+        }
+
+        try {
+
+            const posts = await postModel
+                .find()
+                
+
+            res.json({
+                status: "success",
+                posts: posts
+            });
+
+        } catch (error) {
+
+            res.json({
+                status: "Error",
+                message: error.message
+            });
+
+        }
+
+    });
+});
+
 app.listen(3001, () => {
   console.log("Server is running on port 3001");
 });
